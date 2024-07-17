@@ -1,11 +1,50 @@
 ﻿using System.Text.Json;
 
-var http = new HttpClient();
-var response = await http.GetAsync("https://sudoku-api.vercel.app/api/dosuku");
-var json = await response.Content.ReadAsStringAsync();
-var puzzle = JsonSerializer.Deserialize<Puzzle>(json);
+namespace SudokuSolver;
 
+public static class Program
+{
+    readonly static HttpClient http = new HttpClient();
 
-System.Console.WriteLine("Output:");
-System.Console.WriteLine(json);
-Console.WriteLine(puzzle.newboard.grids[0].value[0][0]);
+    public static async Task Main()
+    {
+        var cancel = new CancellationToken();
+        Puzzle puzzle;
+
+        var exampleFilename = "Example1.json";
+        if (!File.Exists(exampleFilename))
+        {
+            puzzle = await GetNewPuzzle(cancel);
+            await SavePuzzle(puzzle, exampleFilename);
+        }
+        else
+        {
+            puzzle = await LoadPuzzle(exampleFilename, cancel);
+        }
+
+        var solver = new Solver();
+        var solution = solver.FindSolution(puzzle);
+    }
+
+    private static async Task SavePuzzle(Puzzle puzzle, string filename)
+    {
+        var json = JsonSerializer.Serialize<Puzzle>(puzzle, new JsonSerializerOptions() { WriteIndented = true });
+        await File.WriteAllTextAsync(filename, json); 
+    }
+
+    private static async Task<Puzzle> LoadPuzzle(string filename, CancellationToken cancel)
+    {
+        using var json = new StreamReader(filename);
+        var puzzle = await JsonSerializer.DeserializeAsync<Puzzle>(json.BaseStream, cancellationToken: cancel);
+        return puzzle;
+    }
+
+    private static async Task<Puzzle> GetNewPuzzle(CancellationToken cancel)
+    {
+        var response = await http.GetAsync("https://sudoku-api.vercel.app/api/dosuku", cancel);
+        var json = await response.Content.ReadAsStreamAsync(cancel);
+        var puzzle = await JsonSerializer.DeserializeAsync<Puzzle>(json, cancellationToken: cancel);
+        return puzzle;
+    }
+}
+
