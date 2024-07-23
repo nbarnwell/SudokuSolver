@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 
 namespace SudokuSolver;
 
@@ -23,7 +24,17 @@ public static class Program
         }
 
         var solver = new Solver();
-        var solution = solver.FindSolution(puzzle);
+        solver.Solve(puzzle.newboard.grids[0]);
+
+        PrintGrid(puzzle.newboard.grids[0]);
+    }
+
+    private static void PrintGrid(Grid grid)
+    {
+        foreach (var row in grid.value)
+        {
+            Console.WriteLine(string.Join(" | ", row));
+        }
     }
 
     private static async Task SavePuzzle(Puzzle puzzle, string filename)
